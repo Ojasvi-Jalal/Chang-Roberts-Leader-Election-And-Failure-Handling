@@ -1,11 +1,10 @@
 import java.util.*;
-import java.io.*;
 
 /* Class to represent a node. Each node must run on its own thread.*/
 
 public class Node extends Thread {
 
-	private int currentId;
+	private int currentNodeId;
 	private int leaderId = Integer.MIN_VALUE;
 	private boolean participant = false;
 	private boolean isLeader = false;
@@ -18,11 +17,11 @@ public class Node extends Thread {
 	public List<String> incomingMsg;
 
 	// Queues for the outgoing messages
-	public List<String> outgoingMsg;
+	public List<String> outgoingMsg = new ArrayList<>();
 	
-	public Node(int id){
+	public Node(int id, Network network){
 	
-		this.currentId = id;
+		this.currentNodeId = id;
 		this.network = network;
 		
 		myNeighbours = new ArrayList<Node>();
@@ -35,7 +34,7 @@ public class Node extends Thread {
 		/*
 		Method to get the Id of a node instance
 		*/
-		return currentId;
+		return currentNodeId;
 	}
 			
 	public boolean isNodeLeader() {
@@ -64,35 +63,39 @@ public class Node extends Thread {
 		Method that implements the reception of an incoming message by a node
 		*/
 		String start		= m.split(" ")[0];
-		int senderId	= Integer.parseInt(m.split(" ")[1]);
+		int senderId		= Integer.parseInt(m.split(" ")[1]);
 
 		if(start.equals("ELECT")) {
 			// the uid in the election message is larger, so the current process just forwards that message
-			if (senderId > currentId) {
+			if (senderId > currentNodeId) {
 				outgoingMsg.add(m);
 			}
 
 			// the uid in the message is smaller and the current process is not yet a participant
-			else if (currentId > senderId && participant == false) {
+			else if (currentNodeId > senderId && participant == false) {
 				participant = true;
-				outgoingMsg.add("ELECT "+ currentId);
+				outgoingMsg.add("ELECT "+ currentNodeId);
 			}
 
+			else if (currentNodeId == senderId && participant == false) {
+				participant = true;
+				outgoingMsg.add("ELECT "+ currentNodeId);
+			}
 			// the current process starts acting as leader
-			else if (currentId == senderId && participant == true) {
+			else if (currentNodeId == senderId && participant == true) {
 				isLeader = true;
-				leaderId = currentId;
-				System.out.println("FIRST STAGE:The new leader is process " + currentId);
-				outgoingMsg.add("LEADER "+currentId);
+				leaderId = currentNodeId;
+				System.out.println("FIRST STAGE:The new leader is process " + currentNodeId);
+				outgoingMsg.add("LEADER "+ currentNodeId);
 			}
 		}
 
 		else if(start.equals("LEADER")) {
-			if (senderId != currentId) {
+			if (senderId != currentNodeId) {
 				participant = false;
 				leaderId = senderId;
 				outgoingMsg.add(m);
-				System.out.println("SECOND STAGE: The new leader is process " + currentId);
+				System.out.println("SECOND STAGE: The new leader is process " + currentNodeId);
 			}
 		}
 	}
@@ -101,14 +104,18 @@ public class Node extends Thread {
 
 	}
 		
-	public void sendMsg(String m) {
+	public void sendMsg() {
 		/*
 		Method that implements the sending of a message by a node. 
 		The message must be delivered to its recepients through the network.
 		This method need only implement the logic of the network receiving an outgoing message from a node.
 		The remainder of the logic will be implemented in the network class.
 		*/
-
+		if(outgoingMsg.size()> 0) {
+			for (int i = 0; i < outgoingMsg.size(); i++)
+				network.addMessage(currentNodeId, outgoingMsg.get(i));
+		}
+		outgoingMsg.clear();
 	}
 	
 }
