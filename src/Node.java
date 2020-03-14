@@ -26,6 +26,7 @@ public class Node extends Thread {
 		
 		myNeighbours = new ArrayList<Node>();
 		incomingMsg = new ArrayList<String>();
+		this.start();
 	}
 	
 	// Basic methods for the Node class
@@ -49,6 +50,13 @@ public class Node extends Thread {
 		Method to get the neighbours of the node
 		*/
 		return myNeighbours;
+	}
+
+	public List<String> getOutgoingMessages() {
+		/*
+		Method to get the neighbours of the node
+		*/
+		return outgoingMsg;
 	}
 		
 	public void addNeighbour(Node n) {
@@ -98,6 +106,9 @@ public class Node extends Thread {
 				System.out.println("SECOND STAGE: The new leader is process " + currentNodeId);
 			}
 		}
+
+//		if(outgoingMsg.size()> 0)
+//			sendMsg();
 	}
 
 	public void startElection(){
@@ -111,11 +122,11 @@ public class Node extends Thread {
 		This method need only implement the logic of the network receiving an outgoing message from a node.
 		The remainder of the logic will be implemented in the network class.
 		*/
-		if(outgoingMsg.size()> 0) {
-			for (int i = 0; i < outgoingMsg.size(); i++)
-				network.addMessage(currentNodeId, outgoingMsg.get(i));
-		}
-		outgoingMsg.clear();
+//		if(outgoingMsg.size()> 0) {
+//			for (int i = 0; i < outgoingMsg.size(); i++)
+//				network.addMessage(currentNodeId, outgoingMsg.get(i));
+//		}
+//		outgoingMsg.clear();
 	}
 	
 }
