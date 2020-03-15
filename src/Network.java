@@ -34,11 +34,6 @@ public class Network {
 		//nodes.forEach(node -> new Thread(node).start());
 		parseFile(file2);
 		round = 0;
-//		while(msgToDeliver.isEmpty() && !electionRounds.isEmpty()) {
-//			Thread.sleep(period);
-//			round++;
-//		}
-
 
 		while (!electionRounds.isEmpty()) {
 			System.out.println("-----------ROUND: " + round +"----------------");
@@ -56,10 +51,13 @@ public class Network {
 			round++;
 		}
 
+		addMessages();
 		while(!msgToDeliver.isEmpty()){
 			System.out.println("-----------ROUND: " + round +"----------------");
 			deliverMessages();
 			msgToDeliver.clear();
+			addMessages();
+			round++;
 		}
 	}
 
@@ -157,7 +155,7 @@ public class Network {
 			String message = msgToDeliver.get(node);
 			if (message != null) {
 				int currIndex = nodes.indexOf(node) + 1;
-				if(currIndex < nodes.size()-1)
+				if(currIndex <= nodes.size()-1)
 					nodes.get(currIndex).receiveMsg(message);
 				//node.getLeftHandNode().start();
 				else

@@ -1,3 +1,5 @@
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.*;
 
 /* Class to represent a node. Each node must run on its own thread.*/
@@ -77,6 +79,8 @@ public class Node extends Thread {
 			// the uid in the election message is larger, so the current process just forwards that message
 			if (senderId > currentNodeId) {
 				outgoingMsg.add(m);
+				if(participant == false)
+					participant = true;
 			}
 
 			// the uid in the message is smaller and the current process is not yet a participant
@@ -85,16 +89,29 @@ public class Node extends Thread {
 				outgoingMsg.add("ELECT "+ currentNodeId);
 			}
 
+			//case when the node itself starts the election
 			else if (currentNodeId == senderId && participant == false) {
 				participant = true;
 				outgoingMsg.add("ELECT "+ currentNodeId);
 			}
+
 			// the current process starts acting as leader
 			else if (currentNodeId == senderId && participant == true) {
+				participant = false;
 				isLeader = true;
 				leaderId = currentNodeId;
 				System.out.println("FIRST STAGE:The new leader is process " + currentNodeId);
 				outgoingMsg.add("LEADER "+ currentNodeId);
+
+				try {
+					FileWriter myWriter = new FileWriter("log.txt", true);
+					myWriter.write("Leader Node "+leaderId);
+					myWriter.close();
+					System.out.println("Successfully logged to the file.");
+				} catch (IOException e) {
+					System.out.println("An error occurred.");
+					e.printStackTrace();
+				}
 			}
 		}
 
@@ -103,12 +120,12 @@ public class Node extends Thread {
 				participant = false;
 				leaderId = senderId;
 				outgoingMsg.add(m);
-				System.out.println("SECOND STAGE: The new leader is process " + currentNodeId);
+				System.out.println("SECOND STAGE: The new leader is process " + leaderId);
+			}
+			if (senderId == currentNodeId) {
+				System.out.println("SECOND STAGE: Election is over, new leader is " + leaderId);
 			}
 		}
-
-//		if(outgoingMsg.size()> 0)
-//			sendMsg();
 	}
 
 	public void startElection(){
