@@ -1,6 +1,3 @@
-import javafx.util.Pair;
-import org.omg.CORBA.INTERNAL;
-
 import java.util.*;
 import java.io.*;
 /* 
@@ -38,10 +35,12 @@ public class Network {
 		while (!electionRounds.isEmpty()) {
 			System.out.println("-----------ROUND: " + round +"----------------");
 			if (electionRounds.containsKey(round)) {
-				for (Node node : electionRounds.get(round)) {
-					System.out.println("********"+node.getNodeId()+ " wants to start election**************");
-					node.outgoingMsg.add("ELECT " + node.getNodeId());
-				}
+					for (Node node : electionRounds.get(round)) {
+						System.out.println("********" + node.getNodeId() + " wants to start election**************");
+						synchronized (this) {
+							node.outgoingMsg.add("ELECT " + node.getNodeId());
+						}
+					}
 			}
 			addMessages();
 			deliverMessages();
@@ -130,17 +129,15 @@ public class Network {
 		At each round, the network collects all the messages that the nodes want to send to their neighbours.
 		Implement this logic here.
 		*/
-//		for(Pair node: nodes){
-//
-//		}
-		//msgToDeliver.put(senderId, m);
 		for (int i = 0; i < this.nodes.size(); ++i) {
 			List<String> outgoing = ((Node) this.nodes.get(i)).getOutgoingMessages();
 
 			for (int j = 0; j < outgoing.size(); ++j) {
-				msgToDeliver.put((Node) this.nodes.get(i), (String) outgoing.get(j));
-				System.out.println("Node" + ((Node) this.nodes.get(i)).getNodeId() + " has sent a message: " + (String) outgoing.get(j));
-				outgoing.remove(j);
+				synchronized (outgoing) {
+					msgToDeliver.put((Node) this.nodes.get(i), (String) outgoing.get(j));
+					System.out.println("Node" + ((Node) this.nodes.get(i)).getNodeId() + " has sent a message: " + (String) outgoing.get(j));
+					outgoing.remove(j);
+				}
 			}
 		}
 	}
@@ -154,54 +151,33 @@ public class Network {
 		for (Node node : nodes) {
 			String message = msgToDeliver.get(node);
 			if (message != null) {
-				int currIndex = nodes.indexOf(node) + 1;
-				if(currIndex <= nodes.size()-1)
-					nodes.get(currIndex).receiveMsg(message);
-				//node.getLeftHandNode().start();
-				else
-					nodes.get(0).receiveMsg(message);
-				msgToDeliver.remove(node);
-
+				synchronized (this) {
+					int currIndex = nodes.indexOf(node) + 1;
+					if (currIndex <= nodes.size() - 1)
+						nodes.get(currIndex).receiveMsg(message);
+						//node.getLeftHandNode().start();
+					else
+						nodes.get(0).receiveMsg(message);
+					msgToDeliver.remove(node);
+				}
 			}
-
-
-//		for(Integer sender: msgToDeliver.keySet()) {
-////			int currIndex = -1;
-////			for (Pair<Integer, Node> pair : nodes) { // iterating on list of 'Pair's
-////				if (pair.getKey().equals(sender)) {  // 'equals' instead of ==
-////					currIndex  = nodes.indexOf(pair);
-////					break;
-////				}
-////			}
-////
-////			if(currIndex < nodes.size()-1) {
-////				nodes.get(currIndex + 1).getValue().receiveMsg(msgToDeliver.get(sender));
-////			}
-////			else
-////				nodes.get(0).getValue().receiveMsg(msgToDeliver.get(sender));
-////
-////			msgToDeliver.remove(sender);
-//
-//
-//		}
-
 		}
 	}
 
-		public synchronized void informNodeFailure ( int id){
-		/*
-		Method to inform the neighbours of a failed node about the event.
-		*/
-		}
-
-
-		public static void main(String[] args) throws IOException, InterruptedException {
-		/*
-		Your main must get the input file as input.
-		*/
-			Network network = new Network();
-			network.file1 = args[0];
-			network.file2 = args[1];
-			network.NetSimulator();
-		}
+	public synchronized void informNodeFailure ( int id){
+	/*
+	Method to inform the neighbours of a failed node about the event.
+	*/
 	}
+
+
+	public static void main(String[] args) throws IOException, InterruptedException {
+	/*
+	Your main must get the input file as input.
+	*/
+		Network network = new Network();
+		network.file1 = args[0];
+		network.file2 = args[1];
+		network.NetSimulator();
+	}
+}

@@ -68,64 +68,64 @@ public class Node extends Thread {
 		myNeighbours.add(n);
 	}
 				
-	public void receiveMsg(String m) {
+	public synchronized void receiveMsg(String m) {
 		/*
 		Method that implements the reception of an incoming message by a node
 		*/
 		String start		= m.split(" ")[0];
 		int senderId		= Integer.parseInt(m.split(" ")[1]);
 
-		if(start.equals("ELECT")) {
-			// the uid in the election message is larger, so the current process just forwards that message
-			if (senderId > currentNodeId) {
-				outgoingMsg.add(m);
-				if(participant == false)
-					participant = true;
-			}
+		synchronized (this) {
+            if (start.equals("ELECT")) {
+                // the uid in the election message is larger, so the current process just forwards that message
+                if (senderId > currentNodeId) {
+                    outgoingMsg.add(m);
+                    if (participant == false)
+                        participant = true;
+                }
 
-			// the uid in the message is smaller and the current process is not yet a participant
-			else if (currentNodeId > senderId && participant == false) {
-				participant = true;
-				outgoingMsg.add("ELECT "+ currentNodeId);
-			}
+                // the uid in the message is smaller and the current process is not yet a participant
+                else if (currentNodeId > senderId && participant == false) {
+                    participant = true;
+                    outgoingMsg.add("ELECT " + currentNodeId);
+                }
 
-			//case when the node itself starts the election
-			else if (currentNodeId == senderId && participant == false) {
-				participant = true;
-				outgoingMsg.add("ELECT "+ currentNodeId);
-			}
+                //case when the node itself starts the election
+                else if (currentNodeId == senderId && participant == false) {
+                    participant = true;
+                    outgoingMsg.add("ELECT " + currentNodeId);
+                }
 
-			// the current process starts acting as leader
-			else if (currentNodeId == senderId && participant == true) {
-				participant = false;
-				isLeader = true;
-				leaderId = currentNodeId;
-				System.out.println("FIRST STAGE:The new leader is process " + currentNodeId);
-				outgoingMsg.add("LEADER "+ currentNodeId);
+                // the current process starts acting as leader
+                else if (currentNodeId == senderId && participant == true) {
+                    participant = false;
+                    isLeader = true;
+                    leaderId = currentNodeId;
+                    System.out.println("FIRST STAGE:The new leader is process " + currentNodeId);
+                    outgoingMsg.add("LEADER " + currentNodeId);
 
-				try {
-					FileWriter myWriter = new FileWriter("log.txt", true);
-					myWriter.write("Leader Node "+leaderId);
-					myWriter.close();
-					System.out.println("Successfully logged to the file.");
-				} catch (IOException e) {
-					System.out.println("An error occurred.");
-					e.printStackTrace();
-				}
-			}
-		}
-
-		else if(start.equals("LEADER")) {
-			if (senderId != currentNodeId) {
-				participant = false;
-				leaderId = senderId;
-				outgoingMsg.add(m);
-				System.out.println("SECOND STAGE: The new leader is process " + leaderId);
-			}
-			if (senderId == currentNodeId) {
-				System.out.println("SECOND STAGE: Election is over, new leader is " + leaderId);
-			}
-		}
+                    try {
+                        FileWriter myWriter = new FileWriter("log.txt", true);
+                        myWriter.write("Leader Node " + leaderId);
+                        myWriter.close();
+                        System.out.println("Successfully logged to the file.");
+                    } catch (IOException e) {
+                        System.out.println("An error occurred.");
+                        e.printStackTrace();
+                    }
+                }
+            } else if (start.equals("LEADER")) {
+                if (senderId != currentNodeId) {
+                    participant = false;
+                    leaderId = senderId;
+                    outgoingMsg.add(m);
+                    System.out.println("SECOND STAGE: The new leader is process " + leaderId);
+                }
+                if (senderId == currentNodeId) {
+                    System.out.println("SECOND STAGE: Election is over, new leader is " + leaderId);
+                }
+            }
+        }
 	}
 
 	public void startElection(){
