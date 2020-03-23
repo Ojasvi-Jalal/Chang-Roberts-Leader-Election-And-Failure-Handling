@@ -19,16 +19,76 @@ public class Network {
 	private static int period = 20;
 	private Map<Node, String> msgToDeliver; //Integer for the id of the sender and String for the message
 	private Map<Integer, List<Node>> electionRounds = new HashMap<>();
+	private Map<Integer, Node> failureRounds = new HashMap<>();
 	private static String file1;
 	private static String file2;
+
+//	public Network() {
+//		this.start();
+//	}
 
 	/*
 		Code to call methods for parsing the input file, initiating the system and producing the log can be added here.
 	*/
 	public void NetSimulator() throws IOException, InterruptedException {
-		msgToDeliver = new HashMap<Node, String>();
+		msgToDeliver = new HashMap<>();
 		parseFile(file1);
-		//nodes.forEach(node -> new Thread(node).start());
+
+		for(Node node: nodes){
+			for(Node otherNode: nodes){
+				for(int i = 0; i < node.neighbourIds.size(); i++){
+					int id = node.neighbourIds.get(i);
+					if(otherNode.getNodeId() == id){
+						node.addNeighbour(otherNode);
+					}
+				}
+			}
+		}
+
+		//make sure the ring is bi-directional
+		//the first node in the ring
+		Node first = nodes.get(0);
+
+		//the node after the first node
+		Node next = nodes.get(1);
+
+		//the last node in the ring
+		Node last = nodes.get(nodes.size()-1);
+
+		//the node before the last node
+		Node prev = nodes.get(nodes.size()-2);
+
+		if(!first.getNeighbors().contains(last)){
+			first.addNeighbour(last);
+		}
+
+		if(!first.getNeighbors().contains(next)){
+			first.addNeighbour(next);
+		}
+
+		if(!last.getNeighbors().contains(first)){
+			last.addNeighbour(first);
+		}
+
+		if(!last.getNeighbors().contains(prev)){
+			last.addNeighbour(prev);
+		}
+
+
+		for(int i = 1; i < nodes.size()-1; i++) {
+			Node current = nodes.get(i);
+			Node prevNode = nodes.get(i - 1);
+			Node nextNode = nodes.get(i + 1);
+			if (!current.getNeighbors().contains(prevNode)) {
+				current.addNeighbour(prevNode);
+			}
+
+			if (!current.getNeighbors().contains(nextNode)) {
+				current.addNeighbour(nextNode);
+			}
+
+		}
+
 		parseFile(file2);
 		round = 0;
 
@@ -74,6 +134,7 @@ public class Network {
 			while ((line = br.readLine()) != null) {
 				String[] fields = line.split("\\s");
 				String mode = fields[0];
+				//elections
 				if (mode.equals("ELECT")) {
 					List<Node> startElection = new ArrayList<>();
 					for (int i = 2; i < fields.length; i++) {
@@ -83,16 +144,23 @@ public class Network {
 						}
 					}
 					electionRounds.put(Integer.parseInt(fields[1]), startElection);
-				} else if (mode.equals("FAIL")) {
+				}
+
+				//failures - only a single node fails in a round.
+				else if (mode.equals("FAIL")) {
+					List<Node> failures = new ArrayList<>();
+						for (Node node : nodes) {
+							if (Integer.parseInt(fields[2]) == node.getNodeId())
+								failureRounds.put(Integer.parseInt(fields[1]), node);
+						}
 
 				} else {
 					Integer nodeId = Integer.parseInt(mode);
 					Node mainNode = new Node(nodeId, this);
 					//System.out.println(fields[0]);
 					for (int i = 1; i < fields.length; i++) {
-						mainNode.addNeighbour(new Node(Integer.parseInt(fields[i]), this));
+						mainNode.neighbourIds.add(Integer.parseInt(fields[i]));
 					}
-					//nodes.add(new Pair(mode, mainNode));
 					nodes.add(mainNode);
 				}
 
@@ -100,11 +168,12 @@ public class Network {
 			// close the reader
 			br.close();
 
+
 		} catch (IOException ex) {
 			ex.printStackTrace();
 		}
 
-//check nodes and neighbours created alright
+////check nodes and neighbours created alright
 //        for(Node node: nodes){
 //            System.out.print(node.getNodeId()+" ");
 //            for(Node neighbours : node.myNeighbours){
@@ -112,6 +181,8 @@ public class Network {
 //            }
 //            System.out.println();
 //        }
+//
+//		System.out.println("**************************");
 
 		//elections
 //		System.out.print("*********Round********");

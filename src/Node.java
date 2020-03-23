@@ -15,6 +15,9 @@ public class Node extends Thread {
 	// Neighbouring nodes
 	public List<Node> myNeighbours;
 
+    // Neighbouring node ids
+    public List<Integer> neighbourIds;
+
 	// Queues for the incoming messages
 	public List<String> incomingMsg;
 
@@ -26,8 +29,9 @@ public class Node extends Thread {
 		this.currentNodeId = id;
 		this.network = network;
 		
-		myNeighbours = new ArrayList<Node>();
-		incomingMsg = new ArrayList<String>();
+		myNeighbours = new ArrayList<>();
+		neighbourIds = new ArrayList<>();
+		incomingMsg = new ArrayList<>();
 		this.start();
 	}
 	
