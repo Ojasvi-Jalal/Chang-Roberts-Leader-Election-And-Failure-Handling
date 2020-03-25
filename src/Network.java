@@ -250,7 +250,6 @@ public class Network {
 					int currIndex = nodes.indexOf(node) + 1;
 					if (currIndex <= nodes.size() - 1)
 						nodes.get(currIndex).receiveMsg(message);
-						//node.getLeftHandNode().start();
 					else
 						nodes.get(0).receiveMsg(message);
 					msgToDeliver.remove(node);

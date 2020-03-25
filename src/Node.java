@@ -80,7 +80,7 @@ public class Node extends Thread {
 		int senderId		= Integer.parseInt(m.split(" ")[1]);
 
 		synchronized (this) {
-            if (start.equals("ELECT")) {
+            if (start.equals("ELECT") || start.equals("FORWARD")) {
                 // the uid in the election message is larger, so the current process just forwards that message
                 if (senderId > currentNodeId) {
                     outgoingMsg.add(m);
@@ -91,13 +91,13 @@ public class Node extends Thread {
                 // the uid in the message is smaller and the current process is not yet a participant
                 else if (currentNodeId > senderId && participant == false) {
                     participant = true;
-                    outgoingMsg.add("ELECT " + currentNodeId);
+                    outgoingMsg.add("FORWARD " + currentNodeId);
                 }
 
                 //case when the node itself starts the election
                 else if (currentNodeId == senderId && participant == false) {
                     participant = true;
-                    outgoingMsg.add("ELECT " + currentNodeId);
+                    outgoingMsg.add("FORWARD " + currentNodeId);
                 }
 
                 // the current process starts acting as leader
