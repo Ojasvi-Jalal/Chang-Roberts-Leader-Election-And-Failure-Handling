@@ -1,3 +1,5 @@
+import javafx.util.Pair;
+
 import java.util.*;
 import java.io.*;
 /* 
@@ -92,22 +94,64 @@ public class Network {
 		parseFile(file2);
 		round = 0;
 
-		while (!electionRounds.isEmpty()) {
-			System.out.println("-----------ROUND: " + round +"----------------");
-			if (electionRounds.containsKey(round)) {
-					for (Node node : electionRounds.get(round)) {
-						System.out.println("********" + node.getNodeId() + " wants to start election**************");
-						synchronized (this) {
-							node.outgoingMsg.add("ELECT " + node.getNodeId());
-						}
+		while (!electionRounds.isEmpty() || !msgToDeliver.isEmpty() || !failureRounds.isEmpty()) {
+			System.out.println("-----------ROUND: " + round + "----------------");
+			if (!electionRounds.isEmpty() && electionRounds.containsKey(round)) {
+				for (Node node : electionRounds.get(round)) {
+					System.out.println("********" + node.getNodeId() + " wants to start election**************");
+					synchronized (this) {
+						node.outgoingMsg.add("ELECT " + node.getNodeId());
 					}
+				}
 			}
 			addMessages();
 			deliverMessages();
 			msgToDeliver.clear();
 			electionRounds.remove(round);
-			Thread.sleep(period);
-			round++;
+
+			if (failureRounds.containsKey(round)) {
+				synchronized (this) {
+					Node failedNode = failureRounds.get(round);
+					int position = nodes.indexOf(failedNode);
+					int nextPos;
+					int previousPos;
+					if(position == nodes.size()-1){
+						nextPos = 0;
+						previousPos = position - 1;
+					}
+					else if(position == 0){
+						previousPos = nodes.size()-1;
+						nextPos = position +1;
+
+					}
+					else{
+						nextPos = position +1;
+						previousPos = position - 1;
+					}
+					System.out.println("Node " + failedNode.getNodeId() + " has failed in round " + round);
+					//inform the node's neighbours remove the node from the network
+					informNodeFailure(failedNode);
+					if (isNetworkConnected(nodes.get(previousPos), nodes.get(nextPos))) {
+						if (failedNode.isNodeLeader()) {
+							System.out.println("The failed node" + failedNode + "was the leader unfortunately");
+							System.out.println("The neighbouring right-hand node will restart the election in the nextPos round");
+							List<Node> startElectionNode = new ArrayList<>();
+							startElectionNode.add(nodes.get(nextPos));
+							electionRounds.put(round + 1, startElectionNode);
+							nodes.remove(failedNode);
+						} else {
+							System.out.println("The failed node" + failedNode + "was not the leader fortunately");
+							nodes.remove(failedNode);
+						}
+					} else {
+						System.out.println("Network is disconnected... terminating program...");
+						System.exit(0);
+					}
+				}
+				failureRounds.remove(round);
+			}
+				Thread.sleep(period);
+				round++;
 		}
 
 		addMessages();
@@ -116,6 +160,7 @@ public class Network {
 			deliverMessages();
 			msgToDeliver.clear();
 			addMessages();
+			Thread.sleep(period);
 			round++;
 		}
 	}
@@ -172,27 +217,6 @@ public class Network {
 		} catch (IOException ex) {
 			ex.printStackTrace();
 		}
-
-////check nodes and neighbours created alright
-//        for(Node node: nodes){
-//            System.out.print(node.getNodeId()+" ");
-//            for(Node neighbours : node.myNeighbours){
-//                System.out.print(neighbours.getNodeId()+",");
-//            }
-//            System.out.println();
-//        }
-//
-//		System.out.println("**************************");
-
-		//elections
-//		System.out.print("*********Round********");
-//		for(Integer round: electionRounds.keySet()){
-//			System.out.print(round+" ");
-//			for(Node othernodes : electionRounds.get(round)){
-//				System.out.print(othernodes.getNodeId()+",");
-//			}
-//			System.out.println();
-//		}
 	}
 
 	public synchronized void addMessages() {
@@ -235,12 +259,47 @@ public class Network {
 		}
 	}
 
-	public synchronized void informNodeFailure ( int id){
+	public synchronized void informNodeFailure ( Node failedNode){
 	/*
 	Method to inform the neighbours of a failed node about the event.
 	*/
+		synchronized (this) {
+			for (Node n : failedNode.getNeighbors()) {
+				n.myNeighbours.remove(failedNode);
+			}
+		}
 	}
 
+	public synchronized boolean isNetworkConnected ( Node leftNode, Node rightNode){
+	/*
+	Method to check if the network is still connected using BFS
+	*/
+
+		LinkedList<Node> queue = new LinkedList<Node>();
+
+		// Mark all the nodes as not visited(By default set
+		// as false)
+		//boolean visited[] = new boolean[nodes.size()];
+		Integer currentNodeId = leftNode.getNodeId();
+		Integer	destinationNodeId = rightNode.getNodeId();
+		// Mark the current node as visited and enqueue it
+		queue.add(leftNode);
+		while(!queue.isEmpty()){
+
+			//get the first node in the queue
+			Node s = queue.poll();
+
+			if(s.getNeighbors().contains(leftNode)){
+				System.out.println("Network is still connected as path found between nodes" + currentNodeId + "and "+ destinationNodeId);
+				return true;
+			}
+
+			else {
+					queue.addAll(s.getNeighbors());
+			}
+		}
+		return false;
+	}
 
 	public static void main(String[] args) throws IOException, InterruptedException {
 	/*
