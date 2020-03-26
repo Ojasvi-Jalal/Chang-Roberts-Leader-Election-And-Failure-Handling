@@ -15,7 +15,6 @@ Class to simulate the network. System design directions:
 
 public class Network {
 
-	//private static List<Pair<Integer, Node>> nodes = new ArrayList<>();
 	private static List<Node> nodes = new ArrayList<>();
 	private int round;
 	private static int period = 20;
@@ -25,17 +24,16 @@ public class Network {
 	private static String file1;
 	private static String file2;
 
-//	public Network() {
-//		this.start();
-//	}
 
 	/*
 		Code to call methods for parsing the input file, initiating the system and producing the log can be added here.
 	*/
 	public void NetSimulator() throws IOException, InterruptedException {
 		msgToDeliver = new HashMap<>();
+		//parses the first file to create the network
 		parseFile(file1);
 
+		//
 		for(Node node: nodes){
 			for(Node otherNode: nodes){
 				for(int i = 0; i < node.neighbourIds.size(); i++){
@@ -76,7 +74,7 @@ public class Network {
 			last.addNeighbour(prev);
 		}
 
-
+		//make sure the ring is bi-directional
 		for(int i = 1; i < nodes.size()-1; i++) {
 			Node current = nodes.get(i);
 			Node prevNode = nodes.get(i - 1);
@@ -91,9 +89,13 @@ public class Network {
 
 		}
 
+		//parse the second input
 		parseFile(file2);
+
+		//initiate the round
 		round = 0;
 
+		//runs until there's no election rounds, no failure rounds and no current message deliveries
 		while (!electionRounds.isEmpty() || !msgToDeliver.isEmpty() || !failureRounds.isEmpty()) {
 			System.out.println("-----------ROUND: " + round + "----------------");
 			if (!electionRounds.isEmpty() && electionRounds.containsKey(round)) {
@@ -109,10 +111,12 @@ public class Network {
 			msgToDeliver.clear();
 			electionRounds.remove(round);
 
+			//handles failures
 			if (failureRounds.containsKey(round)) {
 				synchronized (this) {
 					Node failedNode = failureRounds.get(round);
 					int position = nodes.indexOf(failedNode);
+					//find the right and left neighbours
 					int nextPos;
 					int previousPos;
 					if(position == nodes.size()-1){
@@ -128,21 +132,24 @@ public class Network {
 						nextPos = position +1;
 						previousPos = position - 1;
 					}
+
 					System.out.println("Node " + failedNode.getNodeId() + " has failed in round " + round);
 					//inform the node's neighbours remove the node from the network
 					informNodeFailure(failedNode);
+					//check if the network still connected
 					if (isNetworkConnected(nodes.get(previousPos), nodes.get(nextPos))) {
 						if (failedNode.isNodeLeader()) {
-							System.out.println("The failed node" + failedNode + "was the leader unfortunately");
+							System.out.println("The failed node " + failedNode.getNodeId()  + " was the leader unfortunately");
 							System.out.println("The neighbouring right-hand node will restart the election in the nextPos round");
-							List<Node> startElectionNode = new ArrayList<>();
-							startElectionNode.add(nodes.get(nextPos));
-							electionRounds.put(round + 1, startElectionNode);
-							nodes.remove(failedNode);
 						} else {
-							System.out.println("The failed node" + failedNode + "was not the leader fortunately");
-							nodes.remove(failedNode);
+							System.out.println("The failed node " + failedNode.getNodeId() + " was not the leader fortunately, however, elections must restart!");
+							System.out.println("The neighbouring right-hand node "+nodes.get(nextPos).getNodeId()+" will restart the election in the nextPos round");
 						}
+						List<Node> startElectionNode = new ArrayList<>();
+						startElectionNode.add(nodes.get(nextPos));
+						electionRounds.put(round + 1, startElectionNode);
+						System.out.println("Recontructing the network.....");
+						nodes.remove(failedNode);
 					} else {
 						System.out.println("Network is disconnected... terminating program...");
 						System.exit(0);
@@ -150,11 +157,14 @@ public class Network {
 				}
 				failureRounds.remove(round);
 			}
-				Thread.sleep(period);
-				round++;
+
+			Thread.sleep(period);
+			round++;
 		}
 
 		addMessages();
+
+		//if there's still more messages to deliver, e.g., leader messages
 		while(!msgToDeliver.isEmpty()){
 			System.out.println("-----------ROUND: " + round +"----------------");
 			deliverMessages();
@@ -199,13 +209,15 @@ public class Network {
 								failureRounds.put(Integer.parseInt(fields[1]), node);
 						}
 
-				} else {
+				} else { //networ-graph
 					Integer nodeId = Integer.parseInt(mode);
 					Node mainNode = new Node(nodeId, this);
-					//System.out.println(fields[0]);
+
+					//just add neighbour ids for now to avoid duplication, actual nodes will be added later on
 					for (int i = 1; i < fields.length; i++) {
 						mainNode.neighbourIds.add(Integer.parseInt(fields[i]));
 					}
+					//add the main node to the ring
 					nodes.add(mainNode);
 				}
 
@@ -222,16 +234,15 @@ public class Network {
 	public synchronized void addMessages() {
 		/*
 		At each round, the network collects all the messages that the nodes want to send to their neighbours.
-		Implement this logic here.
 		*/
-		for (int i = 0; i < this.nodes.size(); ++i) {
-			List<String> outgoing = ((Node) this.nodes.get(i)).getOutgoingMessages();
+		for (Node currentNode: nodes) {
+			List<String> messageQueue = (currentNode).getOutgoingMessages();
 
-			for (int j = 0; j < outgoing.size(); ++j) {
-				synchronized (outgoing) {
-					msgToDeliver.put((Node) this.nodes.get(i), (String) outgoing.get(j));
-					System.out.println("Node" + ((Node) this.nodes.get(i)).getNodeId() + " has sent a message: " + (String) outgoing.get(j));
-					outgoing.remove(j);
+			for (int j = 0; j < messageQueue.size(); ++j) {
+				synchronized (messageQueue) {
+					msgToDeliver.put(currentNode, messageQueue.get(j));
+					System.out.println("Node" + currentNode.getNodeId() + " is sending this message to the next node: " + (String) messageQueue.get(j));
+					messageQueue.remove(j);
 				}
 			}
 		}
@@ -247,6 +258,7 @@ public class Network {
 			String message = msgToDeliver.get(node);
 			if (message != null) {
 				synchronized (this) {
+					//senf the message to the neighbouring node, in case of the last node, it sends it to the first node.
 					int currIndex = nodes.indexOf(node) + 1;
 					if (currIndex <= nodes.size() - 1)
 						nodes.get(currIndex).receiveMsg(message);
@@ -260,7 +272,8 @@ public class Network {
 
 	public synchronized void informNodeFailure ( Node failedNode){
 	/*
-	Method to inform the neighbours of a failed node about the event.
+	Method to inform the neighbours of a failed node about the even,
+	i.e. remove the node from other nodes' neighbours list
 	*/
 		synchronized (this) {
 			for (Node n : failedNode.getNeighbors()) {
@@ -274,14 +287,11 @@ public class Network {
 	Method to check if the network is still connected using BFS
 	*/
 
-		LinkedList<Node> queue = new LinkedList<Node>();
+		LinkedList<Node> queue = new LinkedList<>();
 
-		// Mark all the nodes as not visited(By default set
-		// as false)
-		//boolean visited[] = new boolean[nodes.size()];
 		Integer currentNodeId = leftNode.getNodeId();
 		Integer	destinationNodeId = rightNode.getNodeId();
-		// Mark the current node as visited and enqueue it
+		// Enqueue the current node
 		queue.add(leftNode);
 		while(!queue.isEmpty()){
 
@@ -289,7 +299,8 @@ public class Network {
 			Node s = queue.poll();
 
 			if(s.getNeighbors().contains(leftNode)){
-				System.out.println("Network is still connected as path found between nodes" + currentNodeId + "and "+ destinationNodeId);
+				System.out.println("Network is still connected as path found between nodes " + currentNodeId + " and "+ destinationNodeId);
+				queue.clear();
 				return true;
 			}
 
@@ -297,6 +308,7 @@ public class Network {
 					queue.addAll(s.getNeighbors());
 			}
 		}
+		queue.clear();
 		return false;
 	}
 
@@ -305,7 +317,9 @@ public class Network {
 	Your main must get the input file as input.
 	*/
 		Network network = new Network();
+		//network-graph file
 		network.file1 = args[0];
+		//fail_round/ elect_rounds file
 		network.file2 = args[1];
 		network.NetSimulator();
 	}

@@ -131,23 +131,5 @@ public class Node extends Thread {
             }
         }
 	}
-
-	public void startElection(){
-
-	}
-		
-	public void sendMsg() {
-		/*
-		Method that implements the sending of a message by a node. 
-		The message must be delivered to its recepients through the network.
-		This method need only implement the logic of the network receiving an outgoing message from a node.
-		The remainder of the logic will be implemented in the network class.
-		*/
-//		if(outgoingMsg.size()> 0) {
-//			for (int i = 0; i < outgoingMsg.size(); i++)
-//				network.addMessage(currentNodeId, outgoingMsg.get(i));
-//		}
-//		outgoingMsg.clear();
-	}
 	
 }
