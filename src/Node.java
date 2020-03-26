@@ -1,6 +1,8 @@
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
+import java.util.logging.FileHandler;
+import java.util.logging.Logger;
 
 /* Class to represent a node. Each node must run on its own thread.*/
 
@@ -11,6 +13,7 @@ public class Node extends Thread {
 	private boolean participant = false;
 	private boolean isLeader = false;
 	private Network network;
+	private boolean whichPartWritten = false;
 	
 	// Neighbouring nodes
 	public List<Node> myNeighbours;
@@ -23,7 +26,8 @@ public class Node extends Thread {
 
 	// Queues for the outgoing messages
 	public List<String> outgoingMsg = new ArrayList<>();
-	
+
+	//class constructor, initialises the node and starts its thread
 	public Node(int id, Network network){
 	
 		this.currentNodeId = id;
@@ -71,7 +75,7 @@ public class Node extends Thread {
 		*/
 		myNeighbours.add(n);
 	}
-				
+
 	public synchronized void receiveMsg(String m) {
 		/*
 		Method that implements the reception of an incoming message by a node
@@ -80,6 +84,7 @@ public class Node extends Thread {
 		int senderId		= Integer.parseInt(m.split(" ")[1]);
 
 		synchronized (this) {
+		    //when the election process is still going on
             if (start.equals("ELECT") || start.equals("FORWARD")) {
                 // the uid in the election message is larger, so the current process just forwards that message
                 if (senderId > currentNodeId) {
@@ -109,16 +114,20 @@ public class Node extends Thread {
                     outgoingMsg.add("LEADER " + currentNodeId);
 
                     try {
-                        FileWriter myWriter = new FileWriter("log.txt", true);
-                        myWriter.write("Leader Node " + leaderId);
-                        myWriter.close();
+                        FileHandler handler = new FileHandler("log.txt", true);
+                        Logger logger = Logger.getLogger("com.javacodegeeks.snippets.core");
+                        logger.addHandler(handler);
+                        if(!whichPartWritten)
+                            logger.finer(this.network.part+"\n");
+                        logger.finer("Leader Node " + leaderId + "\n");
                         System.out.println("Successfully logged to the file.");
                     } catch (IOException e) {
                         System.out.println("An error occurred.");
                         e.printStackTrace();
                     }
                 }
-            } else if (start.equals("LEADER")) {
+            } //when the leader has been elected
+            else if (start.equals("LEADER")) {
                 if (senderId != currentNodeId) {
                     participant = false;
                     leaderId = senderId;

@@ -24,6 +24,12 @@ public class Network {
 	private static String file1;
 	private static String file2;
 
+	//to find if it's part B, for the log file
+	public String part = "";
+
+	public Network() throws IOException {
+	}
+
 
 	/*
 		Code to call methods for parsing the input file, initiating the system and producing the log can be added here.
@@ -191,6 +197,7 @@ public class Network {
 				String mode = fields[0];
 				//elections
 				if (mode.equals("ELECT")) {
+					part = "Part A";
 					List<Node> startElection = new ArrayList<>();
 					for (int i = 2; i < fields.length; i++) {
 						for(Node node: nodes) {
@@ -203,6 +210,7 @@ public class Network {
 
 				//failures - only a single node fails in a round.
 				else if (mode.equals("FAIL")) {
+					part = "Part B";
 					List<Node> failures = new ArrayList<>();
 						for (Node node : nodes) {
 							if (Integer.parseInt(fields[2]) == node.getNodeId())
