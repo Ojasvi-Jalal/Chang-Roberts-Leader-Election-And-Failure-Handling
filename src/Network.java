@@ -28,10 +28,6 @@ public class Network {
 	public String part = "";
 	public boolean whichPartWritten = false;
 
-	public Network() throws IOException {
-	}
-
-
 	/*
 		Code to call methods for parsing the input file, initiating the system and producing the log can be added here.
 	*/
@@ -190,7 +186,8 @@ public class Network {
 		if (part.equals("Part B")) {
 			try {
 				FileWriter myWriter = new FileWriter("log.txt", true);
-				myWriter.write("simulation completed");
+				myWriter.write("simulation completed \n");
+				myWriter.flush();
 				myWriter.close();
 				System.out.println("Simulation Completed written successfully to the file.");
 			} catch(IOException e){
