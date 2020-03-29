@@ -259,7 +259,6 @@ public class Network {
 		*/
 		for (Node currentNode: nodes) {
 			List<String> messageQueue = (currentNode).getOutgoingMessages();
-
 			for (int j = 0; j < messageQueue.size(); ++j) {
 				synchronized (messageQueue) {
 					msgToDeliver.put(currentNode, messageQueue.get(j));

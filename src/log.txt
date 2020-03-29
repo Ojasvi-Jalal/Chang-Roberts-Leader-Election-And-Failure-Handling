@@ -1,2 +1,18 @@
 Part A
 Leader Node 20
+
+Part B
+Leader Node 20
+Leader Node 18
+Leader Node 18
+Leader Node 18
+simulation completed 
+Part A
+Leader Node 20
+
+Part B
+Leader Node 20
+Leader Node 18
+Leader Node 18
+Leader Node 18
+simulation completed 

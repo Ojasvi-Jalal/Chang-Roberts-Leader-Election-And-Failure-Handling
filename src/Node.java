@@ -117,7 +117,10 @@ public class Node extends Thread {
                         FileWriter myWriter = new FileWriter("log.txt", true);
                         if(!this.network.whichPartWritten){
                             this.network.whichPartWritten = true;
-                            myWriter.write(this.network.part+"\n");
+                            if(this.network.part.equals("Part B"))
+                                myWriter.write("\n"+this.network.part+"\n");
+                            else
+                                myWriter.write(this.network.part+"\n");
                         }
                         myWriter.write("Leader Node " + leaderId+ "\n");
                         myWriter.close();
