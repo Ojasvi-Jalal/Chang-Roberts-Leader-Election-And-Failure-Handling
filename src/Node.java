@@ -13,7 +13,6 @@ public class Node extends Thread {
 	private boolean participant = false;
 	private boolean isLeader = false;
 	private Network network;
-	private boolean whichPartWritten = false;
 	
 	// Neighbouring nodes
 	public List<Node> myNeighbours;
@@ -107,6 +106,7 @@ public class Node extends Thread {
 
                 // the current process starts acting as leader
                 else if (currentNodeId == senderId && participant == true) {
+                    //node marks itself as non-participant
                     participant = false;
                     isLeader = true;
                     leaderId = currentNodeId;
@@ -114,21 +114,23 @@ public class Node extends Thread {
                     outgoingMsg.add("LEADER " + currentNodeId);
 
                     try {
-                        FileHandler handler = new FileHandler("log.txt", true);
-                        Logger logger = Logger.getLogger("com.javacodegeeks.snippets.core");
-                        logger.addHandler(handler);
-                        if(!whichPartWritten)
-                            logger.finer(this.network.part+"\n");
-                        logger.finer("Leader Node " + leaderId + "\n");
+                        FileWriter myWriter = new FileWriter("log.txt", true);
+                        if(!this.network.whichPartWritten){
+                            this.network.whichPartWritten = true;
+                            myWriter.write(this.network.part+"\n");
+                        }
+                        myWriter.write("Leader Node " + leaderId+ "\n");
+                        myWriter.close();
                         System.out.println("Successfully logged to the file.");
                     } catch (IOException e) {
                         System.out.println("An error occurred.");
                         e.printStackTrace();
                     }
                 }
-            } //when the leader has been elected
+            } //communicate to each node when the leader has been elected
             else if (start.equals("LEADER")) {
                 if (senderId != currentNodeId) {
+                    //node marks itself as non-participant
                     participant = false;
                     leaderId = senderId;
                     outgoingMsg.add(m);

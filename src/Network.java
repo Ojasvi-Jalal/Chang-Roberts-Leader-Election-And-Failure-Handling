@@ -26,6 +26,7 @@ public class Network {
 
 	//to find if it's part B, for the log file
 	public String part = "";
+	public boolean whichPartWritten = false;
 
 	public Network() throws IOException {
 	}
@@ -40,11 +41,11 @@ public class Network {
 		parseFile(file1);
 
 		//
-		for(Node node: nodes){
-			for(Node otherNode: nodes){
-				for(int i = 0; i < node.neighbourIds.size(); i++){
+		for (Node node : nodes) {
+			for (Node otherNode : nodes) {
+				for (int i = 0; i < node.neighbourIds.size(); i++) {
 					int id = node.neighbourIds.get(i);
-					if(otherNode.getNodeId() == id){
+					if (otherNode.getNodeId() == id) {
 						node.addNeighbour(otherNode);
 					}
 				}
@@ -59,29 +60,29 @@ public class Network {
 		Node next = nodes.get(1);
 
 		//the last node in the ring
-		Node last = nodes.get(nodes.size()-1);
+		Node last = nodes.get(nodes.size() - 1);
 
 		//the node before the last node
-		Node prev = nodes.get(nodes.size()-2);
+		Node prev = nodes.get(nodes.size() - 2);
 
-		if(!first.getNeighbors().contains(last)){
+		if (!first.getNeighbors().contains(last)) {
 			first.addNeighbour(last);
 		}
 
-		if(!first.getNeighbors().contains(next)){
+		if (!first.getNeighbors().contains(next)) {
 			first.addNeighbour(next);
 		}
 
-		if(!last.getNeighbors().contains(first)){
+		if (!last.getNeighbors().contains(first)) {
 			last.addNeighbour(first);
 		}
 
-		if(!last.getNeighbors().contains(prev)){
+		if (!last.getNeighbors().contains(prev)) {
 			last.addNeighbour(prev);
 		}
 
 		//make sure the ring is bi-directional
-		for(int i = 1; i < nodes.size()-1; i++) {
+		for (int i = 1; i < nodes.size() - 1; i++) {
 			Node current = nodes.get(i);
 			Node prevNode = nodes.get(i - 1);
 			Node nextNode = nodes.get(i + 1);
@@ -125,17 +126,15 @@ public class Network {
 					//find the right and left neighbours
 					int nextPos;
 					int previousPos;
-					if(position == nodes.size()-1){
+					if (position == nodes.size() - 1) {
 						nextPos = 0;
 						previousPos = position - 1;
-					}
-					else if(position == 0){
-						previousPos = nodes.size()-1;
-						nextPos = position +1;
+					} else if (position == 0) {
+						previousPos = nodes.size() - 1;
+						nextPos = position + 1;
 
-					}
-					else{
-						nextPos = position +1;
+					} else {
+						nextPos = position + 1;
 						previousPos = position - 1;
 					}
 
@@ -143,18 +142,27 @@ public class Network {
 					//inform the node's neighbours remove the node from the network
 					informNodeFailure(failedNode);
 					//check if the network still connected
-					if (isNetworkConnected(nodes.get(previousPos), nodes.get(nextPos))) {
+					Node leftNode = nodes.get(previousPos);
+					Node rightNode = nodes.get(nextPos);
+
+					if (isNetworkConnected(leftNode, rightNode)) {
 						if (failedNode.isNodeLeader()) {
-							System.out.println("The failed node " + failedNode.getNodeId()  + " was the leader unfortunately");
+
+							System.out.println("The failed node " + failedNode.getNodeId() + " was the leader unfortunately");
 							System.out.println("The neighbouring right-hand node will restart the election in the nextPos round");
 						} else {
 							System.out.println("The failed node " + failedNode.getNodeId() + " was not the leader fortunately, however, elections must restart!");
-							System.out.println("The neighbouring right-hand node "+nodes.get(nextPos).getNodeId()+" will restart the election in the nextPos round");
+							System.out.println("The neighbouring right-hand node " + rightNode.getNodeId() + " will restart the election in the nextPos round");
 						}
 						List<Node> startElectionNode = new ArrayList<>();
-						startElectionNode.add(nodes.get(nextPos));
+						startElectionNode.add(rightNode);
 						electionRounds.put(round + 1, startElectionNode);
 						System.out.println("Recontructing the network.....");
+						//simply remove the the failednode and let the left and right node become neighbours if they are not already
+						if (!leftNode.getNeighbors().contains(rightNode)) {
+							leftNode.addNeighbour(rightNode);
+							rightNode.addNeighbour(leftNode);
+						}
 						nodes.remove(failedNode);
 					} else {
 						System.out.println("Network is disconnected... terminating program...");
@@ -171,13 +179,24 @@ public class Network {
 		addMessages();
 
 		//if there's still more messages to deliver, e.g., leader messages
-		while(!msgToDeliver.isEmpty()){
-			System.out.println("-----------ROUND: " + round +"----------------");
+		while (!msgToDeliver.isEmpty()) {
+			System.out.println("-----------ROUND: " + round + "----------------");
 			deliverMessages();
 			msgToDeliver.clear();
 			addMessages();
 			Thread.sleep(period);
 			round++;
+		}
+		if (part.equals("Part B")) {
+			try {
+				FileWriter myWriter = new FileWriter("log.txt", true);
+				myWriter.write("simulation completed");
+				myWriter.close();
+				System.out.println("Simulation Completed written successfully to the file.");
+			} catch(IOException e){
+				System.out.println("An error occurred.");
+				e.printStackTrace();
+			}
 		}
 	}
 
@@ -211,12 +230,10 @@ public class Network {
 				//failures - only a single node fails in a round.
 				else if (mode.equals("FAIL")) {
 					part = "Part B";
-					List<Node> failures = new ArrayList<>();
-						for (Node node : nodes) {
-							if (Integer.parseInt(fields[2]) == node.getNodeId())
-								failureRounds.put(Integer.parseInt(fields[1]), node);
-						}
-
+					for (Node node : nodes) {
+						if (Integer.parseInt(fields[2]) == node.getNodeId())
+							failureRounds.put(Integer.parseInt(fields[1]), node);
+					}
 				} else { //networ-graph
 					Integer nodeId = Integer.parseInt(mode);
 					Node mainNode = new Node(nodeId, this);
@@ -266,7 +283,7 @@ public class Network {
 			String message = msgToDeliver.get(node);
 			if (message != null) {
 				synchronized (this) {
-					//senf the message to the neighbouring node, in case of the last node, it sends it to the first node.
+					//send the message to the neighbouring node, in case of the last node, it sends it to the first node.
 					int currIndex = nodes.indexOf(node) + 1;
 					if (currIndex <= nodes.size() - 1)
 						nodes.get(currIndex).receiveMsg(message);
