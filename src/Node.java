@@ -53,6 +53,19 @@ public class Node extends Thread {
 		*/
 		return isLeader;
 	}
+	public int  getLeader() {
+		/*
+		Method to return true if the node is currently a leader
+		*/
+        return leaderId;
+    }
+
+    public void  setLeader(int id) {
+		/*
+		Method to return true if the node is currently a leader
+		*/
+        leaderId = id;
+    }
 		
 	public List<Node> getNeighbors() {
 		/*

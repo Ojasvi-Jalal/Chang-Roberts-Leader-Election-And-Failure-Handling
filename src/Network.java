@@ -143,17 +143,21 @@ public class Network {
 
 					if (isNetworkConnected(leftNode, rightNode)) {
 						if (failedNode.isNodeLeader()) {
-
+							//removes the leader from each node's leader id
+							for(Node node: nodes){
+								node.setLeader(Integer.MIN_VALUE);
+							}
 							System.out.println("The failed node " + failedNode.getNodeId() + " was the leader unfortunately");
 							System.out.println("The neighbouring right-hand node will restart the election in the nextPos round");
 						} else {
 							System.out.println("The failed node " + failedNode.getNodeId() + " was not the leader fortunately, however, elections must restart!");
 							System.out.println("The neighbouring right-hand node " + rightNode.getNodeId() + " will restart the election in the nextPos round");
 						}
+						//elections start in the next round.
 						List<Node> startElectionNode = new ArrayList<>();
 						startElectionNode.add(rightNode);
 						electionRounds.put(round + 1, startElectionNode);
-						System.out.println("Recontructing the network.....");
+						System.out.println("Reconstructing the network.....");
 						//simply remove the the failednode and let the left and right node become neighbours if they are not already
 						if (!leftNode.getNeighbors().contains(rightNode)) {
 							leftNode.addNeighbour(rightNode);
